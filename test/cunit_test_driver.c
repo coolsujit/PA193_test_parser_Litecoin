@@ -34,6 +34,7 @@ int main()
 
     // Run all tests using CUnit Basic interface which outputs
     // results to command-line.
+    // basic result 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
 
