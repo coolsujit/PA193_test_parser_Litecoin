@@ -135,9 +135,56 @@ void Fetch_block_header(FILE* BLOCK)
 	printf("\nNonce : %u", Nonce);	
 }
 
+uint64_t varint(FILE* BLOCK)
+{
+	uint8_t s1;
+	uint16_t s2;
+	uint32_t s3;
+	uint64_t s4;
+	int count=fread(&s1, 1, 1, BLOCK);//trying to get no of trancsactions
+	if (count!=1)
+	{
+		printf("\nError reading s1");
+	}
+
+	if(s1<0xfd)
+		return (uint64_t)s1;
+
+	else if (s1==0xfd)
+	{
+
+		count=fread(&s2, 1, 2, BLOCK);//trying to get no of trancsactions
+	
+		if (count!=2)
+		{
+			printf("\nError reading s2");
+		}
+
+		return (uint64_t)s2;
+	}
+	else if(s1==0xfe)
+	{
+		count=fread(&s3, 1, 4, BLOCK);//trying to get no of trancsactions
+		if (count!=4)
+		{
+			printf("\nError reading s3");
+		}
+		return (uint64_t)s3;
+	}
+	else if(s1==0xff)
+	{
+		count=fread(&s4, 1, 8, BLOCK);//trying to get no of trancsactions
+		if (count!=8)
+		{
+			printf("\nError reading s4");
+		}
+		return (uint64_t)s4;
+	}
+}
 int main()
 {
 	FILE *BLOCK;
+	uint64_t no_of_transactions;
 	int retval=0;
 	BLOCK = fopen("block_current", "rb");
 	if(BLOCK==NULL)
@@ -166,6 +213,7 @@ int main()
 	}
 	//Parsing the rest of the block
 	Fetch_block_header(BLOCK);
-	
+	no_of_transactions=varint(BLOCK);
+	printf("\nNo. of transactions in this block : %llu",no_of_transactions);	
 	return 0;
 }
