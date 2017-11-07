@@ -10,4 +10,6 @@ The block validity is ascertained as under :-
 (d) Whether the input transactions are valid or not.
 (e) And finally whether the output transactions are valid or not.
 
-Till now part a is successfully done.
+Till now 
+
+Part a and b is completed successfully.
