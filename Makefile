@@ -3,7 +3,7 @@ default: all
 LIBS = -lssl -lcrypto
 MAIN = liteparser
 all: 	  
-	$(CC) -o $(MAIN) -g -Wall -Wextra liteparser.c $(LIBS)
+	$(CC) -o $(MAIN) -g -Wall -Wextra -std=c99 liteparser.c $(LIBS)
 clean:
 	$(RM) *~ $(MAIN)
 test:
