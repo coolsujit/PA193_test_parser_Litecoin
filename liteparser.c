@@ -70,6 +70,72 @@ int calculate_block_size(FILE* BLOCK)
 	
 }
 
+void Fetch_block_header(FILE* BLOCK)
+{
+	uint32_t Version;
+	unsigned char hashPrevBlock[32];
+	unsigned char hashMerkleRoot[32]	;
+	uint32_t Time;
+	uint32_t Bits;
+	uint32_t Nonce;
+
+	int count=fread(&Version, 1, 4, BLOCK);//Reading version from block file
+	if (count!=4)
+		{
+			printf("Error in reading version number\n");
+		}
+	printf("Version : %u\n", Version);
+	
+ 	count=fread(&hashPrevBlock, 1, 32, BLOCK);//Reading Hash of previous block 
+	
+	if (count!=32)
+	{
+		printf("error reading previous block header hash \n");
+	}
+	printf("Hash of previous block : ");
+	
+	for(int k=0;k<32;k++)
+	printf("%02x",hashPrevBlock[31-k]);
+	printf("\n");
+
+	count=fread(&hashMerkleRoot, 1, 32, BLOCK);//Reading Hash of merkle root of the block 
+	
+	if (count!=32)
+	{
+		printf("error reading merkle root hash \n");
+	}
+	
+	printf("Hash of Merkle Root : ");
+
+	for(int j=0;j<32;j++)
+	printf("%02x", hashMerkleRoot[31-j]);
+	printf("\n");
+
+	count=fread(&Time, 1, 4, BLOCK);//Reading Time of block 
+	
+	if (count!=4)
+	{
+		printf("error reading time stamp of block header \n");
+	}
+	printf("Block time : %u\n", Time);
+
+	count=fread(&Bits, 1, 4, BLOCK);//Reading bits (difficulty level) of block 
+	
+	if (count!=4)
+	{
+		printf("Error reading Bits of  block header \n");
+	}
+	printf("Block bits : %2x\n", Bits);
+
+	count=fread(&Nonce, 1, 4, BLOCK);//Reading Nonce from block header
+	
+	if (count!=4)
+	{
+		printf("error reading Nonce block header \n");
+	}
+	printf("Nonce : %u\n", Nonce);	
+}
+
 int main()
 {
 	FILE *BLOCK;
@@ -99,5 +165,8 @@ int main()
 	{
 		printf("\nBlock Size not found valid");
 	}
+	
+	Fetch_block_header(BLOCK);
+	
 	return 0;
 }
