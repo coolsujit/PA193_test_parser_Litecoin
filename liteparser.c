@@ -26,7 +26,7 @@ void Magic_number(FILE* BLOCK)
 int main()
 {
 	FILE *BLOCK;
-	BLOCK = fopen("parser_s", "rb");
+	BLOCK = fopen("block_current", "rb");
 		if(BLOCK==NULL)
 		{
 			printf("\n Error in opening block file ");
