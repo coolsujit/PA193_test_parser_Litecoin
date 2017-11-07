@@ -9,9 +9,9 @@ int Magic_number(FILE* BLOCK)
 	int count = fread(&magic, 1, 4, BLOCK);//trying to read magic number
 	if (count!=4)
 	{
-		printf("Error reading magic number\n");
+		printf("\nError reading magic number\n");
 	}
-	printf("Magic no read as:");
+	printf("\nMagic no read as:");
 	for(int i=0;i<4;i++)
 	{	
 		printf("%2x",magic[i]);
@@ -41,17 +41,17 @@ int main()
 	BLOCK = fopen("block_current", "rb");
 	if(BLOCK==NULL)
 	{
-		printf("\n Error in opening block file ");
+		printf("\nError in opening block file ");
       	    			
 	}
 	retval=Magic_number(BLOCK);
 	if (retval==0)
 	{
-		printf("\n Magic Number matched successfully ");
+		printf("\nMagic Number matched successfully ");
 	}
 	else
 	{
-		printf("\n Magic Number invalid for Litecoin ");
+		printf("\nMagic Number invalid for Litecoin ");
 	}
 	return 0;
 }
