@@ -14,3 +14,5 @@ test2:
 	./$(MAIN) block_w2
 test3:
 	./$(MAIN) block_w3
+test4:
+	./$(MAIN) block_w4
