@@ -24,6 +24,7 @@ int Magic_number(FILE* BLOCK)
 	for(int i=0;i<4;i++)
 	{	
 		if (magic[i]!=magic_check[i])
+								 
 		{
 			verify=1;
 			break;
@@ -39,8 +40,10 @@ int Magic_number(FILE* BLOCK)
 	}
 }
 
+
 int calculate_block_size(FILE* BLOCK)
 {
+ 
 	uint32_t block_size = 0;
 	int count=fread(&block_size, 1, 4, BLOCK);
 	if (count!=4)
@@ -50,21 +53,16 @@ int calculate_block_size(FILE* BLOCK)
 	
 	printf("\nBlock_size is : %u",block_size);
 
+
 	/*To calculate block size*/
 	
   	uint32_t block_start_pointer = 0;
 	block_start_pointer = ftell(BLOCK);  //where is file pointer righ now save it 
 	fseek(BLOCK, 0, SEEK_END);          // placing the file pointer to end of file
 	int cal_size_of_BLOCK = ftell(BLOCK);      // determining the size of plain text file
-	// Here we need to do some more checks 
-	if((actual_blk_size >0) && (actual_blk_size <33554432))
-	{
-	int actual_blk_size = cal_size_of_BLOCK - block_start_pointer; //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
-	}
-	else
-	{
-	 printf("\nactual block size error\n");
-	}
+	
+	int actual_blk_size = cal_size_of_BLOCK -  block_start_pointer ; //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
+	
 	if (actual_blk_size!= block_size)
 	{
 		printf("\nIncorrect block size");
@@ -72,7 +70,7 @@ int calculate_block_size(FILE* BLOCK)
 	}
 	
 	fseek(BLOCK, block_start_pointer, SEEK_SET);          // placing the file pointer again to its previous position (8 byte from start)
-	return 0;
+	return 0;	  
 	
 }
 
@@ -85,7 +83,7 @@ void Fetch_block_header(FILE* BLOCK)
 	uint32_t Bits;
 	uint32_t Nonce;
 
-	printf("\nPrinting Block Header:- \n");
+										
 	int count=fread(&Version, 1, 4, BLOCK);//Reading version from block file
 	if (count!=4)
 	{
@@ -107,6 +105,7 @@ void Fetch_block_header(FILE* BLOCK)
 	}
 	
 	count=fread(&hashMerkleRoot, 1, 32, BLOCK);//Reading Hash of merkle root of the block 
+	
 	if (count!=32)
 	{
 		printf("\nError reading merkle root hash");
@@ -118,12 +117,15 @@ void Fetch_block_header(FILE* BLOCK)
 	{
 		printf("%02x", hashMerkleRoot[31-j]);
 	}
+	
 	count=fread(&Time, 1, 4, BLOCK);//Reading Time of block 
+	
 	if (count!=4)
 	{
 		printf("error reading time stamp of block header \n");
 	}
-	printf("\nBlock time : %u", Time);
+	printf("nBlock time : %u\n", Time);
+
 	count=fread(&Bits, 1, 4, BLOCK);//Reading bits (difficulty level) of block 
 	
 	if (count!=4)
@@ -138,7 +140,7 @@ void Fetch_block_header(FILE* BLOCK)
 	{
 		printf("\nError reading Nonce block header");
 	}
-	printf("\nNonce : %u", Nonce);	
+	printf("\nNonce : %u", Nonce);
 }
 
 uint64_t varint(FILE* BLOCK)
@@ -171,22 +173,77 @@ uint64_t varint(FILE* BLOCK)
 	else if(s1==0xfe)
 	{
 		count=fread(&s3, 1, 4, BLOCK);//trying to get no of trancsactions
+	
 		if (count!=4)
 		{
 			printf("\nError reading s3");
 		}
+
 		return (uint64_t)s3;
 	}
 	else if(s1==0xff)
 	{
 		count=fread(&s4, 1, 8, BLOCK);//trying to get no of trancsactions
+	
 		if (count!=8)
 		{
 			printf("\nError reading s4");
 		}
 		return (uint64_t)s4;
+		
 	}
 }
+
+void Input_transaction(FILE* BLOCK)
+{
+	uint8_t hash_previous_transaction[32];
+	uint32_t n;
+	uint64_t script_length;  
+	uint8_t *input_script;
+	uint32_t sequence_number;
+	
+	int count=fread(&hash_previous_transaction, 1, 32, BLOCK);//Fetching Hash of previous trancsaction
+	if (count!=32)
+	{
+		printf("\nError in getting hash_previous_transaction");
+	}
+	printf("\nHash of previous transaction to this input : ");
+	for(int j=0;j<32;j++)
+		printf("%02x", hash_previous_transaction[31-j]);
+	printf("\n");
+	
+	count=fread(&n, 1, 4, BLOCK);//Reading n
+	if (count!=4)
+	{
+		printf("Error in getting n \n");
+	}
+	printf("n= %u\n",n);
+	script_length=varint(BLOCK);			//calculating length of input script
+
+	printf("Script length :  %llu\n", script_length);
+
+	input_script=(unsigned char*)malloc(script_length*sizeof(unsigned char));
+
+	count=fread(input_script, 1, script_length, BLOCK);
+	//Feching input script
+	if (count!=script_length)
+	{
+		printf("Error in getting input script \n");
+	}
+	printf("Input script : ");
+	for(int j=0;j<script_length;j++)
+		printf("%02x", input_script[j]);
+		printf("\n");
+	
+	count=fread(&sequence_number, 1, 4, BLOCK);//Fetching sequence number
+	if (count!=4)
+	{
+		printf("Error in getting sequence number \n");
+	}
+	printf("sequence No. : %x\n", sequence_number);
+	free(input_script);	
+}
+
 int main()
 {
 	FILE *BLOCK;
@@ -221,5 +278,7 @@ int main()
 	Fetch_block_header(BLOCK);
 	no_of_transactions=varint(BLOCK);
 	printf("\nNo. of transactions in this block : %llu",no_of_transactions);	
+ 
 	return 0;
 }
+
