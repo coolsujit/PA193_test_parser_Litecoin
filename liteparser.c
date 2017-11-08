@@ -62,7 +62,7 @@ int calculate_block_size(FILE* BLOCK)
 	fseek(BLOCK, 0, SEEK_END);          // placing the file pointer to end of file
 	int cal_size_of_BLOCK = ftell(BLOCK);      // determining the size of plain text file
 	
-	int actual_blk_size = cal_size_of_BLOCK -  block_start_pointer ; //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
+	uint32_t actual_blk_size = (uint32_t) (cal_size_of_BLOCK -  block_start_pointer); //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
 	
 	if (actual_blk_size!= block_size)
 	{
@@ -204,7 +204,7 @@ void Input_transaction(FILE* BLOCK)
 	uint8_t *input_script;
 	uint32_t sequence_number;
  
-	int count=fread(&hash_previous_transaction, 1, 32, BLOCK);//Fetching Hash of previous trancsaction
+	uint64_t count=fread(&hash_previous_transaction, 1, 32, BLOCK);//Fetching Hash of previous trancsaction
 	if (count!=32)
 	{
 		printf("\nError in getting hash_previous_transaction");
@@ -232,7 +232,7 @@ void Input_transaction(FILE* BLOCK)
 		printf("\nError in getting input script");
 	}
 	printf("\nInput script : ");
-	for(int j=0;j<script_length;j++)
+	for(uint64_t j=0;j<script_length;j++)
 		printf("%02x", input_script[j]);
 	
 	count=fread(&sequence_number, 1, 4, BLOCK);//Fetching sequence number
@@ -266,7 +266,7 @@ void Output_transactions(FILE* BLOCK)
 		printf("\nError in getting output script");
 	}
 	printf("\nOutput script is : ");
-	for(int j=0;j<output_script_size;j++)
+	for(uint64_t j=0;j<output_script_size;j++)
 		printf("%02x", output_script[j]);
 }
 
@@ -275,7 +275,6 @@ void Transactions(FILE* BLOCK)
 	unsigned char *Transaction_hash;
 	uint32_t Transaction_version_no;
 	uint64_t input_transaction_count;
-	uint32_t timestamp;
 	uint64_t output_transaction_count;
 	uint32_t lock_time;
 	int Transaction_start_pointer, Transaction_end_pointer,Transaction_size;
@@ -382,7 +381,7 @@ int main()
 	no_of_transactions=varint(BLOCK);
 	printf("\nNo. of transactions in this block : %llu",no_of_transactions);
 	
-	for(int i = 0;i<no_of_transactions;i++)
+	for(uint64_t i = 0;i<no_of_transactions;i++)
 	{
 		printf("\n\n*****Transaction %d *****",i+1);
 		Transactions(BLOCK);
