@@ -70,7 +70,7 @@ int calculate_block_size(FILE* BLOCK)
 	}
 	
 	fseek(BLOCK, block_start_pointer, SEEK_SET);          // placing the file pointer again to its previous position (8 byte from start)
-	return 0;	  
+	return 0;
 	
 }
 
@@ -83,7 +83,7 @@ void Fetch_block_header(FILE* BLOCK)
 	uint32_t Bits;
 	uint32_t Nonce;
 
-										
+	printf("\nPrinting Block Header:- \n");
 	int count=fread(&Version, 1, 4, BLOCK);//Reading version from block file
 	if (count!=4)
 	{
@@ -124,7 +124,7 @@ void Fetch_block_header(FILE* BLOCK)
 	{
 		printf("error reading time stamp of block header \n");
 	}
-	printf("\nBlock time : %u\n", Time);
+	printf("\nBlock time : %u", Time);
 
 	count=fread(&Bits, 1, 4, BLOCK);//Reading bits (difficulty level) of block 
 	
@@ -278,7 +278,5 @@ int main()
 	Fetch_block_header(BLOCK);
 	no_of_transactions=varint(BLOCK);
 	printf("\nNo. of transactions in this block : %llu",no_of_transactions);	
- 
 	return 0;
 }
-
