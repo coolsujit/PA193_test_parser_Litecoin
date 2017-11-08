@@ -124,7 +124,7 @@ void Fetch_block_header(FILE* BLOCK)
 	{
 		printf("error reading time stamp of block header \n");
 	}
-	printf("nBlock time : %u\n", Time);
+	printf("\nBlock time : %u\n", Time);
 
 	count=fread(&Bits, 1, 4, BLOCK);//Reading bits (difficulty level) of block 
 	
