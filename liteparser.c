@@ -384,14 +384,14 @@ void validate()
 		if(check.calculated_previous_block_header_hash[i]!=check.previous_block_header_hash[i])
 		{
 			var1=1;
-			printf("\nPrev block found and Hash matched successfully!");
+			printf("\nPrev block Hash not matching!");
 			break;
 		}
 	
 	}
 
 	if(var1==0)
-		printf("\nPrev block found but Hash not matching");
+		printf("\nPrev block Hash matched successfully!");
 		
 	
 }
