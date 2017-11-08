@@ -83,7 +83,7 @@ void Fetch_block_header(FILE* BLOCK)
 	uint32_t Bits;
 	uint32_t Nonce;
 
-	printf("\nPrinting Block Header:- \n");
+	printf("\n\nPrinting Block Header:- ");
 	int count=fread(&Version, 1, 4, BLOCK);//Reading version from block file
 	if (count!=4)
 	{
