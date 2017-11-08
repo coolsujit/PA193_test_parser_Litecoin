@@ -293,7 +293,7 @@ void Transactions(FILE* BLOCK)
 	printf("\nNo of input in current transaction : %llu", input_transaction_count);
 	for(unsigned int i =0;i<input_transaction_count;i++)
 	{
-		printf("\nvin %d,i+1);
+		printf("\nvin %d",i+1);
 		printf("\n{");
 		Input_transaction(BLOCK);
 		printf("\n}");
@@ -304,7 +304,7 @@ void Transactions(FILE* BLOCK)
 	printf("\nNo of output from current transaction : %llu", output_transaction_count);
 	for(unsigned int i =0;i<output_transaction_count;i++)
 	{
-		printf("\nvout %d,i+1);
+		printf("\nvout %d",i+1);
 		printf("\n{");
 		Output_transactions(BLOCK);
 		printf("\n}");
