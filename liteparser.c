@@ -218,7 +218,7 @@ void Input_transaction(FILE* BLOCK)
 	{
 		printf("\nError in getting n");
 	}
-	printf("\nn= %u",n);
+	printf("\nn : %u",n);
 	script_length=varint(BLOCK);			//calculating length of input script
 
 	printf("\nScript length :  %llu", script_length);
@@ -293,7 +293,10 @@ void Transactions(FILE* BLOCK)
 	printf("\nNo of input in current transaction : %llu", input_transaction_count);
 	for(unsigned int i =0;i<input_transaction_count;i++)
 	{
+		printf("\nvin %d,i+1);
+		printf("\n{");
 		Input_transaction(BLOCK);
+		printf("\n}");
 	}
 	
 	output_transaction_count=varint(BLOCK);
@@ -301,7 +304,10 @@ void Transactions(FILE* BLOCK)
 	printf("\nNo of output from current transaction : %llu", output_transaction_count);
 	for(unsigned int i =0;i<output_transaction_count;i++)
 	{
+		printf("\nvout %d,i+1);
+		printf("\n{");
 		Output_transactions(BLOCK);
+		printf("\n}");
 	}
 	
 	count=fread(&lock_time, 1, 4, BLOCK);//trying to read lock time of current transaction
