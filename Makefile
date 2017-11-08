@@ -8,3 +8,9 @@ clean:
 	$(RM) *~ $(MAIN)
 test:
 	./$(MAIN) block_current
+test1:
+	./$(MAIN) block_w1
+test2:
+	./$(MAIN) block_w2
+test3:
+	./$(MAIN) block_w3
