@@ -254,8 +254,8 @@ void Output_transactions(FILE* BLOCK)
 	{
 		printf("\nError in getting value");
 	}
-	printf("\nValue of transaction : %0.8f LTC",(float)((value*1.0)/100000000));
-
+	//printf("\nValue of transaction : %0.8f LTC",(float)((value*1.0)/100000000));
+	printf("\nValue of transaction : %0.8llu LTC",value);
 	output_script_size=varint(BLOCK);//fetching ouput script size
 	printf("\nOutput script size : %llu",output_script_size);
 	output_script =(unsigned char*)malloc(output_script_size*sizeof(unsigned char));
