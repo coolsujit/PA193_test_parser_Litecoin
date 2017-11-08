@@ -209,7 +209,7 @@ void Input_transaction(FILE* BLOCK)
 	{
 		printf("\nError in getting hash_previous_transaction");
 	}
-	printf("\nHash of previous transaction to this input : ");
+	printf("\n\tHash of previous transaction to this input : ");
 	for(int j=0;j<32;j++)
 		printf("%02x", hash_previous_transaction[31-j]);
 	
@@ -218,10 +218,10 @@ void Input_transaction(FILE* BLOCK)
 	{
 		printf("\nError in getting n");
 	}
-	printf("\nn : %u",n);
+	printf("\n\tn : %u",n);
 	script_length=varint(BLOCK);			//calculating length of input script
 
-	printf("\nScript length :  %llu", script_length);
+	printf("\n\tScript length :  %llu", script_length);
 
 	input_script=(unsigned char*)malloc(script_length*sizeof(unsigned char));
 
@@ -231,7 +231,7 @@ void Input_transaction(FILE* BLOCK)
 	{
 		printf("\nError in getting input script");
 	}
-	printf("\nInput script : ");
+	printf("\n\tInput script : ");
 	for(uint64_t j=0;j<script_length;j++)
 		printf("%02x", input_script[j]);
 	
@@ -240,7 +240,7 @@ void Input_transaction(FILE* BLOCK)
 	{
 		printf("\nError in getting sequence number");
 	}
-	printf("\nSequence No. : %x", sequence_number);
+	printf("\n\tSequence No. : %x", sequence_number);
 	free(input_script);	
 }
 
@@ -254,9 +254,9 @@ void Output_transactions(FILE* BLOCK)
 	{
 		printf("\nError in getting value");
 	}
-	printf("\nValue of transaction : %0.8lf LTC",(double)((value*1.0)/100000000));
+	printf("\n\tValue of transaction : %0.8lf LTC",(double)((value*1.0)/100000000));
 	output_script_size=varint(BLOCK);//fetching ouput script size
-	printf("\nOutput script size : %llu",output_script_size);
+	printf("\n\tOutput script size : %llu",output_script_size);
 	output_script =(unsigned char*)malloc(output_script_size*sizeof(unsigned char));
 	
 	count=fread(output_script, 1, output_script_size, BLOCK);//trying to get no of trancsactions
@@ -264,7 +264,7 @@ void Output_transactions(FILE* BLOCK)
 	{
 		printf("\nError in getting output script");
 	}
-	printf("\nOutput script is : ");
+	printf("\n\tOutput script is : ");
 	for(uint64_t j=0;j<output_script_size;j++)
 		printf("%02x", output_script[j]);
 }
