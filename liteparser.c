@@ -6,6 +6,7 @@
 #include <openssl/sha.h>
 #include <time.h>
 
+
 int Magic_number(FILE* BLOCK)
 {
 	unsigned char magic_check[4] = {0xfb,0xc0,0xb6,0xdb};
@@ -271,6 +272,76 @@ void Output_transactions(FILE* BLOCK)
 		printf("%02x", output_script[j]);
 	printf("\n");
 }
+void Transactions(FILE* BLOCK)
+{   
+	unsigned char *Transaction_hash;
+	uint32_t Transaction_version_no;
+	uint64_t input_transaction_count;
+	uint32_t timestamp;
+	uint64_t output_transaction_count;
+	uint32_t lock_time;
+	int Transaction_start_pointer, Transaction_end_pointer,Transaction_size;
+	Transaction_start_pointer = ftell(BLOCK);//
+		
+	int count=fread(&Transaction_version_no, 1, 4, BLOCK);//trying to read magic number
+	if (count!=4)
+	{
+		printf("\nError reading Tansaction Version no.");
+	}
+
+	printf("\nVersion of Transaction : %u",Transaction_version_no);  
+  	input_transaction_count=varint(BLOCK);
+
+	printf("\nNo of input in current transaction : %llu", input_transaction_count);
+	for(unsigned int i =0;i<input_transaction_count;i++)
+	{
+		Input_transaction(BLOCK);
+	}
+	
+	output_transaction_count=varint(BLOCK);
+	
+	printf("\nNo of output from current transaction : %llu", output_transaction_count);
+	for(unsigned int i =0;i<output_transaction_count;i++)
+	{
+		Output_transactions(BLOCK);
+	}
+	
+	count=fread(&lock_time, 1, 4, BLOCK);//trying to read lock time of current transaction
+	if (count!=4)
+	{
+		printf("error reading transaction locktime \n");
+	}
+
+	Transaction_end_pointer = ftell(BLOCK);
+	//printf("Transaction ends at %d", Transaction_end_pointer);
+	Transaction_size=Transaction_end_pointer-Transaction_start_pointer;
+	printf("\n\nCurrent transaction size is= %d",Transaction_size);
+	fseek(BLOCK, Transaction_start_pointer, SEEK_SET);
+	unsigned char *Transaction_content, *Hash_1d,*Hash_2d;
+	Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	Hash_2d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	Transaction_hash=(unsigned char *)malloc(32*sizeof(unsigned char));
+	Transaction_content=(unsigned char *)malloc(Transaction_size*sizeof(unsigned char));
+	count=fread(Transaction_content, 1, Transaction_size, BLOCK);//trying to read lock time of current transaction
+	if (count!=Transaction_size)
+	{
+		printf("error reading transaction content \n");
+	}
+	SHA256(Transaction_content, Transaction_size, Hash_1d);
+	SHA256(Hash_1d, 32,Hash_2d);
+	printf("\n\nHash (TXID) of this transaction is: ");
+	for(int j=0;j<32;j++)
+	{
+		Transaction_hash[j]=Hash_2d[31-j];
+		printf("%02x", Hash_2d[31-j]);
+		//hash_array[txno][j]=Hash_2d[j]; // Hash copied in 
+	}
+	//printf("\n");
+	free(Transaction_content);
+	free(Transaction_hash);
+	free(Hash_1d);	
+	free(Hash_2d);
+}
 
 int main()
 {
@@ -305,7 +376,13 @@ int main()
 	//Parsing the rest of the block
 	Fetch_block_header(BLOCK);
 	no_of_transactions=varint(BLOCK);
-	printf("\nNo. of transactions in this block : %llu",no_of_transactions);	
- 
+	printf("\nNo. of transactions in this block : %llu",no_of_transactions);
+	
+	for(int i = 0;i<no_of_transactions;i++)
+	{
+		printf("\n*****Transaction %d *********\n",i+1);
+		Transactions(BLOCK);
+		printf("\n");
+	}
 	return 0;
 }
