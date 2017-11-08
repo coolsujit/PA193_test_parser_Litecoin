@@ -104,6 +104,7 @@ void Fetch_block_header(FILE* BLOCK)
 		printf("%02x",hashPrevBlock[31-k]);
 	}
 	
+	
 	count=fread(&hashMerkleRoot, 1, 32, BLOCK);//Reading Hash of merkle root of the block 
 	
 	if (count!=32)
@@ -201,7 +202,7 @@ void Input_transaction(FILE* BLOCK)
 	uint64_t script_length;  
 	uint8_t *input_script;
 	uint32_t sequence_number;
-	
+ 
 	int count=fread(&hash_previous_transaction, 1, 32, BLOCK);//Fetching Hash of previous trancsaction
 	if (count!=32)
 	{
@@ -215,20 +216,20 @@ void Input_transaction(FILE* BLOCK)
 	count=fread(&n, 1, 4, BLOCK);//Reading n
 	if (count!=4)
 	{
-		printf("Error in getting n \n");
+		printf("\nError in getting n");
 	}
-	printf("n= %u\n",n);
+	printf("\n= %u",n);
 	script_length=varint(BLOCK);			//calculating length of input script
 
-	printf("Script length :  %llu\n", script_length);
+	printf("\nScript length :  %llu", script_length);
 
 	input_script=(unsigned char*)malloc(script_length*sizeof(unsigned char));
 
-	count=fread(input_script, 1, script_length, BLOCK);
-	//Feching input script
+	count=fread(input_script, 1, script_length, BLOCK);//Feching input script
+					   
 	if (count!=script_length)
 	{
-		printf("Error in getting input script \n");
+		printf("\nError in getting input script");
 	}
 	printf("Input script : ");
 	for(int j=0;j<script_length;j++)
@@ -238,10 +239,37 @@ void Input_transaction(FILE* BLOCK)
 	count=fread(&sequence_number, 1, 4, BLOCK);//Fetching sequence number
 	if (count!=4)
 	{
-		printf("Error in getting sequence number \n");
+		printf("\nError in getting sequence number");
 	}
 	printf("sequence No. : %x\n", sequence_number);
 	free(input_script);	
+}
+
+void Output_transactions(FILE* BLOCK)
+{
+	uint64_t output_script_size; 
+  	uint8_t *output_script;
+	uint64_t value;
+	uint64_t count=fread(&value, 1, 8, BLOCK);//Fetching value of transaction
+	if (count!=8)
+	{
+		printf("\nError in getting value");
+	}
+	printf("\nValue of transaction : %f",(float)((value*1.0)/100000000));
+
+	output_script_size=varint(BLOCK);//fetching ouput script size
+	printf("\nOutput script size : %llu",output_script_size);
+	output_script =(unsigned char*)malloc(output_script_size*sizeof(unsigned char));
+	
+	count=fread(output_script, 1, output_script_size, BLOCK);//trying to get no of trancsactions
+	if (count!=output_script_size)
+	{
+		printf("\nError in getting output script");
+	}
+	printf("\nOutput script is : ");
+	for(int j=0;j<output_script_size;j++)
+		printf("%02x", output_script[j]);
+	printf("\n");
 }
 
 int main()
@@ -278,5 +306,6 @@ int main()
 	Fetch_block_header(BLOCK);
 	no_of_transactions=varint(BLOCK);
 	printf("\nNo. of transactions in this block : %llu",no_of_transactions);	
+ 
 	return 0;
 }
