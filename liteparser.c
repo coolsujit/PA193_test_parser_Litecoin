@@ -231,17 +231,16 @@ void Input_transaction(FILE* BLOCK)
 	{
 		printf("\nError in getting input script");
 	}
-	printf("Input script : ");
+	printf("\nInput script : ");
 	for(int j=0;j<script_length;j++)
 		printf("%02x", input_script[j]);
-		printf("\n");
 	
 	count=fread(&sequence_number, 1, 4, BLOCK);//Fetching sequence number
 	if (count!=4)
 	{
 		printf("\nError in getting sequence number");
 	}
-	printf("sequence No. : %x\n", sequence_number);
+	printf("\nSequence No. : %x", sequence_number);
 	free(input_script);	
 }
 
