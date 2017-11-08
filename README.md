@@ -14,4 +14,4 @@ The block validity is ascertained as under :-
 
 Till now 
 
-Part a and b is completed successfully.
+Part a is completed successfully.
