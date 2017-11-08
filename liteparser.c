@@ -383,7 +383,7 @@ int main()
 	
 	for(uint64_t i = 0;i<no_of_transactions;i++)
 	{
-		printf("\n\n*****Transaction %d *****",i+1);
+		printf("\n\n*****Transaction %llu *****",i+1);
 		Transactions(BLOCK);
 	}
 	return 0;
