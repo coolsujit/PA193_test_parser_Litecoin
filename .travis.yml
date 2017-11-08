@@ -3,3 +3,6 @@ language: c
 script:
   - make all
   - make test
+  - make test1
+  - make test2
+  - make test3
