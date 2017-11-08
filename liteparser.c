@@ -5,7 +5,10 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <time.h>
-
+struct checks{
+   unsigned char previous_block_header_hash[32];
+   unsigned char calculated_previous_block_header_hash[32];
+}check;
 
 int Magic_number(FILE* BLOCK)
 {
@@ -101,7 +104,8 @@ void Fetch_block_header(FILE* BLOCK)
 	printf("\nHash of previous block : ");
 	
 	for(int k=0;k<32;k++)
-	{
+	{	
+		check.previous_block_header_hash[k]=hashPrevBlock[31-k];
 		printf("%02x",hashPrevBlock[31-k]);
 	}
 	
@@ -255,6 +259,7 @@ void Output_transactions(FILE* BLOCK)
 		printf("\nError in getting value");
 	}
 	printf("\n\tValue of transaction : %0.8lf LTC",(double)((value*1.0)/100000000));
+
 	output_script_size=varint(BLOCK);//fetching ouput script size
 	printf("\n\tOutput script size : %llu",output_script_size);
 	output_script =(unsigned char*)malloc(output_script_size*sizeof(unsigned char));
@@ -345,16 +350,77 @@ void Transactions(FILE* BLOCK)
 	free(Hash_2d);
 }
 
-int main()
+void check_previous_header(FILE* block)
+{
+	fseek(block, 8, SEEK_SET);
+	unsigned char *Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	unsigned char *Hash_2d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	unsigned char *block_header_content=(unsigned char*)malloc(80*sizeof(unsigned char));
+	int count=fread(block_header_content, 1, 80, block);//trying to read magic number
+	if (count!=80)
+	{
+		printf("\nCoudnt read the block header");
+		return;
+	}
+	SHA256(block_header_content, 80, Hash_1d);
+	SHA256(Hash_1d, 32,Hash_2d);
+	for(int j=0;j<32;j++)
+	{
+		check.calculated_previous_block_header_hash[j]=Hash_2d[31-j];
+		//printf("%02x", Hash_2d[31-j]);
+	}
+	
+	free(Hash_1d);
+	free(Hash_2d);
+	free(block_header_content);
+}
+
+void validate()
+{
+	int var1=0;
+	for(int i=0;i<32;i++)
+	{
+
+		if(check.calculated_previous_block_header_hash[i]!=check.previous_block_header_hash[i])
+		{
+			var1=1;
+			printf("\nCalculated and previous header hash in block do not Match!!!!!!");
+			break;
+		}
+	
+	}
+
+	if(var1==0)
+		printf("\nCalculated and previous header hash in block Match!!!!");
+		
+	
+}
+
+int main(int argc, char **argv)
 {
 	FILE *BLOCK;
+	FILE *prev_block;
 	uint64_t no_of_transactions;
 	int retval=0;
-	BLOCK = fopen("block_current", "rb");
+	if(argc==2)
+	{
+		BLOCK = fopen(argv[1], "rb");
+		if(BLOCK==NULL)
+		{
+			printf("\nError in opening block file ");
+							
+		}
+	}
+	else
+	{
+		printf("\nUSAGE: ./liteparser <blockfile>");
+		exit(0);
+	}
+	prev_block = fopen("block_prev", "rb");
 	if(BLOCK==NULL)
 	{
 		printf("\nError in opening block file ");
-      	    			
+		exit(1);	
 	}
 	retval=Magic_number(BLOCK);
 	if (retval==0)
@@ -385,5 +451,7 @@ int main()
 		printf("\n\n*****Transaction %llu *****",i+1);
 		Transactions(BLOCK);
 	}
+	check_previous_header(prev_block);
+	validate();//check whether previous block header hash matches 
 	return 0;
 }
