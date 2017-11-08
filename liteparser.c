@@ -56,9 +56,15 @@ int calculate_block_size(FILE* BLOCK)
 	block_start_pointer = ftell(BLOCK);  //where is file pointer righ now save it 
 	fseek(BLOCK, 0, SEEK_END);          // placing the file pointer to end of file
 	int cal_size_of_BLOCK = ftell(BLOCK);      // determining the size of plain text file
-	
-	int actual_blk_size = cal_size_of_BLOCK -  block_start_pointer ; //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
-	
+	// Here we need to do some more checks 
+	if((actual_blk_size >0) && (actual_blk_size <33554432))
+	{
+	int actual_blk_size = cal_size_of_BLOCK - block_start_pointer; //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
+	}
+	else
+	{
+	 printf("\nactual block size error\n");
+	}
 	if (actual_blk_size!= block_size)
 	{
 		printf("\nIncorrect block size");
