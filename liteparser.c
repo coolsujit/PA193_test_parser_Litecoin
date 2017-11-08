@@ -430,6 +430,8 @@ int main(int argc, char **argv)
 	else
 	{
 		printf("\nMagic Number invalid for Litecoin ");
+		printf("\nExiting...");
+		exit(1);
 	}
 	
 	retval=calculate_block_size(BLOCK);
@@ -440,6 +442,8 @@ int main(int argc, char **argv)
 	else
 	{
 		printf("\nBlock Size not found valid");
+		printf("\nExiting...");
+		exit(1);
 	}
 	//Parsing the rest of the block
 	Fetch_block_header(BLOCK);
