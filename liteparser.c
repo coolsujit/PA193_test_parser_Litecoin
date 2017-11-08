@@ -452,7 +452,8 @@ int main(int argc, char **argv)
 		Transactions(BLOCK);
 	}
 	check_previous_header(prev_block);
-	printf("\n\n*****VALIDATION CHECKS*****");
+	printf("\n\n*****BLOCK VALIDATION CHECKS*****");
+	printf("\n");
 	validate();//check whether previous block header hash matches 
 	return 0;
 }
