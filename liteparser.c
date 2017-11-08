@@ -384,14 +384,14 @@ void validate()
 		if(check.calculated_previous_block_header_hash[i]!=check.previous_block_header_hash[i])
 		{
 			var1=1;
-			printf("\nCalculated and previous header hash in block do not Match!!!!!!");
+			printf("\nPrev block found and Hash matched successfully!");
 			break;
 		}
 	
 	}
 
 	if(var1==0)
-		printf("\nCalculated and previous header hash in block Match!!!!");
+		printf("\nPrev block found but Hash not matching");
 		
 	
 }
@@ -452,6 +452,7 @@ int main(int argc, char **argv)
 		Transactions(BLOCK);
 	}
 	check_previous_header(prev_block);
+	printf("\n\n*****VALIDATION CHECKS*****");
 	validate();//check whether previous block header hash matches 
 	return 0;
 }
