@@ -212,14 +212,13 @@ void Input_transaction(FILE* BLOCK)
 	printf("\nHash of previous transaction to this input : ");
 	for(int j=0;j<32;j++)
 		printf("%02x", hash_previous_transaction[31-j]);
-	printf("\n");
 	
 	count=fread(&n, 1, 4, BLOCK);//Reading n
 	if (count!=4)
 	{
 		printf("\nError in getting n");
 	}
-	printf("\n= %u",n);
+	printf("\nn= %u",n);
 	script_length=varint(BLOCK);			//calculating length of input script
 
 	printf("\nScript length :  %llu", script_length);
@@ -270,8 +269,8 @@ void Output_transactions(FILE* BLOCK)
 	printf("\nOutput script is : ");
 	for(int j=0;j<output_script_size;j++)
 		printf("%02x", output_script[j]);
-	printf("\n");
 }
+
 void Transactions(FILE* BLOCK)
 {   
 	unsigned char *Transaction_hash;
@@ -309,13 +308,13 @@ void Transactions(FILE* BLOCK)
 	count=fread(&lock_time, 1, 4, BLOCK);//trying to read lock time of current transaction
 	if (count!=4)
 	{
-		printf("error reading transaction locktime \n");
+		printf("\nError reading transaction locktime");
 	}
 
 	Transaction_end_pointer = ftell(BLOCK);
 	//printf("Transaction ends at %d", Transaction_end_pointer);
 	Transaction_size=Transaction_end_pointer-Transaction_start_pointer;
-	printf("\n\nCurrent transaction size is= %d",Transaction_size);
+	//printf("\nCurrent transaction size is= %d",Transaction_size);
 	fseek(BLOCK, Transaction_start_pointer, SEEK_SET);
 	unsigned char *Transaction_content, *Hash_1d,*Hash_2d;
 	Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
@@ -325,7 +324,7 @@ void Transactions(FILE* BLOCK)
 	count=fread(Transaction_content, 1, Transaction_size, BLOCK);//trying to read lock time of current transaction
 	if (count!=Transaction_size)
 	{
-		printf("error reading transaction content \n");
+		printf("\nError reading transaction content");
 	}
 	SHA256(Transaction_content, Transaction_size, Hash_1d);
 	SHA256(Hash_1d, 32,Hash_2d);
@@ -380,9 +379,8 @@ int main()
 	
 	for(int i = 0;i<no_of_transactions;i++)
 	{
-		printf("\n*****Transaction %d *********\n",i+1);
+		printf("\n\n*****Transaction %d *****",i+1);
 		Transactions(BLOCK);
-		printf("\n");
 	}
 	return 0;
 }
