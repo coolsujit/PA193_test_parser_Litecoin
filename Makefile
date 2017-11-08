@@ -7,4 +7,4 @@ all:
 clean:
 	$(RM) *~ $(MAIN)
 test:
-	./$(MAIN)
+	./$(MAIN) block_current
