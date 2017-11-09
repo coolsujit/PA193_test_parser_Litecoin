@@ -65,7 +65,8 @@ uint64_t varint(FILE* BLOCK)
 
 		return (uint64_t)s3;
 	}
-	else if(s1==0xff)
+	//else if(s1==0xff)
+	else
 	{
 		count=fread(&s4, 1, 8, BLOCK);//trying to get no of trancsactions
 	
@@ -279,7 +280,7 @@ void check_previous_header(FILE* block)
 uint64_t chain_op_transactions(FILE* BLOCK)
 {
 	uint64_t output_script_size; 
-    uint8_t *output_script;
+    	uint8_t *output_script;
 	uint64_t value;
 	uint64_t count=fread(&value, 1, 8, BLOCK);//Fetching value of transaction
 	if (count!=8)
