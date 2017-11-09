@@ -403,7 +403,7 @@ void chain_Transactions(FILE* BLOCK, unsigned char *hash_to_cmp, uint32_t index,
 	if(var1==0)
 	{
 		//Hash match found
-		printf("\nHash match found for output tx");
+		//printf("\nHash match found for output tx");
 		fseek(BLOCK,output_tx_start,SEEK_SET);
 		output_transaction_count=varint(BLOCK);
 		for(unsigned int i =0;i<output_transaction_count;i++)
@@ -451,7 +451,7 @@ void get_out_tx(unsigned char *prev_hash, uint32_t index, uint64_t *tx_value)
 		int count=fread(&blk_size, 1, 4, fp);
 		if (count!=4)
 		{
-			//printf("error reading block size\n");
+			//printf("\nError reading block size");
 			break; //No more block present
 		}
 		
