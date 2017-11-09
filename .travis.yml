@@ -4,11 +4,11 @@ script:
   - make all
   - make test
   #Wrong Magic NO
-  #- make test1
+  - make test1
   #Wrong Prev block Hash
-  #- make test2
+  - make test2
   #Wrong Merkel Hash
-  #- make test3
+  - make test3
   #Wrong Block size
-  #- make test4
+  - make test4
   
