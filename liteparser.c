@@ -27,7 +27,7 @@ struct IP_tx_data {
 uint64_t chain_op_transactions(FILE* BLOCK)
 {
 	uint64_t output_script_size; 
-    uint8_t *output_script;
+   	uint8_t *output_script;
 	uint64_t value;
 	uint64_t count=fread(&value, 1, 8, BLOCK);//Fetching value of transaction
 	if (count!=8)
@@ -176,6 +176,58 @@ void chain_Transactions(FILE* BLOCK, unsigned char *hash_to_cmp, uint32_t index,
 	free(Transaction_hash);
 	free(Hash_1d);	
 	free(Hash_2d);
+}
+
+void get_out_tx(unsigned char *prev_hash, uint32_t index, uint64_t *tx_value)
+{
+
+	FILE *fp;
+	fp= fopen("block_chain", "rb");
+	int block_seek;
+	uint32_t no_of_transactions;
+	int block_no=0;	
+	if(fp==NULL)
+	{
+		printf("\n Error in opening block_chain file ");
+    		exit(1);	
+	}
+	*tx_value=0;
+	while(1)
+	{
+		fseek(fp, 4, SEEK_CUR);//skipped magic number read
+		uint32_t blk_size = 0;
+		int count=fread(&blk_size, 1, 4, fp);
+		if (count!=4)
+		{
+			//printf("error reading block size\n");
+			break; //No more block present
+		}
+		
+		block_seek=ftell(fp);		
+				fseek(fp, 80, SEEK_CUR);//skipped block header bytes
+		no_of_transactions=varint(fp);
+		for(uint32_t i = 0;i<no_of_transactions;i++)
+		{
+		
+			chain_Transactions(fp,prev_hash,index,tx_value);
+			if (*tx_value!=0)
+				break;
+		}
+		if (*tx_value==0)
+		{
+			
+			fseek(fp,block_seek,SEEK_SET);
+			fseek(fp,blk_size,SEEK_CUR);
+		
+		}
+		else
+		//value found.
+			break;		
+		block_no++;
+		//m++;
+	}
+	
+	fclose(fp);
 }
 
 void calculatehash(unsigned char **hash_array)
