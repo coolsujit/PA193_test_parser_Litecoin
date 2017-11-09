@@ -1,11 +1,12 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <time.h>
 #include <inttypes.h>
+
 unsigned char **hash_array;
 uint64_t nooftxn;
 uint8_t odd_even=0; //0 means even, 1 means odd
@@ -14,6 +15,8 @@ struct checks{
    unsigned char calculated_previous_block_header_hash[32];
    unsigned char Merkle_Root[32];  
    unsigned char calculated_Merkle_Root[32];
+   uint64_t total_in;//to calculate total_value of IN txn
+   uint64_t total_out;//to calculate total_value of out txn   
 }check;
 
 struct IP_tx_data {
@@ -24,10 +27,259 @@ struct IP_tx_data {
    	
 }IP;
 
+uint64_t varint(FILE* BLOCK)
+{
+	uint8_t s1;
+	uint16_t s2;
+	uint32_t s3;
+	uint64_t s4;
+	int count=fread(&s1, 1, 1, BLOCK);//trying to get no of trancsactions
+	if (count!=1)
+	{
+		printf("\nError reading s1");
+	}
+
+	if(s1<0xfd)
+		return (uint64_t)s1;
+
+	else if (s1==0xfd)
+	{
+
+		count=fread(&s2, 1, 2, BLOCK);//trying to get no of trancsactions
+	
+		if (count!=2)
+		{
+			printf("\nError reading s2");
+		}
+
+		return (uint64_t)s2;
+	}
+	else if(s1==0xfe)
+	{
+		count=fread(&s3, 1, 4, BLOCK);//trying to get no of trancsactions
+	
+		if (count!=4)
+		{
+			printf("\nError reading s3");
+		}
+
+		return (uint64_t)s3;
+	}
+	else if(s1==0xff)
+	{
+		count=fread(&s4, 1, 8, BLOCK);//trying to get no of trancsactions
+	
+		if (count!=8)
+		{
+			printf("\nError reading s4");
+		}
+		return (uint64_t)s4;
+		
+	}
+}
+	
+void calculatehash(unsigned char **hash_array)
+{
+	unsigned char *hash_64byte = (unsigned char *)malloc(64*sizeof(unsigned char));
+	int k=0;
+	//uint64_t nooftxn_temp=nooftxn;
+	//nooftxn_temp=nooftxn_temp/2;
+	unsigned int m=0;
+	while (m<nooftxn)
+	{
+		for(int j=0;j<64;j++)
+		{
+			if (j<32)
+			{
+				hash_64byte[j]=hash_array[m][j];
+			}
+			else
+			{
+				hash_64byte[j]=hash_array[m+1][j-32];
+			}
+
+		}
+		SHA256((unsigned char *)hash_64byte,64,(unsigned char *)hash_array[k]);
+		SHA256((unsigned char *)hash_array[k],32,(unsigned char *)hash_array[k]);
+		k++;
+		m=m+2;
+	}
+	free(hash_64byte);
+}	
+
+int Magic_number(FILE* BLOCK)
+{
+	unsigned char magic_check[4] = {0xfb,0xc0,0xb6,0xdb};
+	unsigned char magic[4];
+	int verify=0;
+	int count = fread(&magic, 1, 4, BLOCK);//trying to read magic number
+	if (count!=4)
+	{
+		printf("\nError reading magic number");
+	}
+	printf("\nMagic no read as:");
+	for(int i=0;i<4;i++)
+	{	
+		printf("%2x",magic[i]);
+	}
+	for(int i=0;i<4;i++)
+	{	
+		if (magic[i]!=magic_check[i])
+								 
+		{
+			verify=1;
+			break;
+		}
+	}
+	if (verify!=0)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+
+int calculate_block_size(FILE* BLOCK)
+{
+	uint32_t block_size = 0;
+	int count=fread(&block_size, 1, 4, BLOCK);
+	if (count!=4)
+	{
+		printf("\nError reading block size");
+	}
+	
+	printf("\nBlock_size is : %u",block_size);
+
+
+	/*To calculate block size*/
+	
+    uint32_t block_start_pointer = 0;
+	block_start_pointer = ftell(BLOCK);  //where is file pointer righ now save it 
+	fseek(BLOCK, 0, SEEK_END);          // placing the file pointer to end of file
+	int cal_size_of_BLOCK = ftell(BLOCK);      // determining the size of plain text file
+	
+	uint32_t actual_blk_size = (uint32_t) (cal_size_of_BLOCK -  block_start_pointer); //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
+	
+	if (actual_blk_size!= block_size)
+	{
+		printf("\nBlock Size not found valid");
+		printf("\nExiting...\n");
+		exit(1);
+	}
+	
+	fseek(BLOCK, block_start_pointer, SEEK_SET);          // placing the file pointer again to its previous position (8 byte from start)
+	return(actual_blk_size);
+		
+}
+void Fetch_block_header(FILE* BLOCK)
+{
+	uint32_t Version;
+	unsigned char hashPrevBlock[32];
+	unsigned char hashMerkleRoot[32];
+	uint32_t Time;
+	uint32_t Bits;
+	uint32_t Nonce;
+
+	printf("\n\nPrinting Block Header:- ");
+	int count=fread(&Version, 1, 4, BLOCK);//Reading version from block file
+	if (count!=4)
+	{
+		printf("\nError in reading version number");
+	}
+	printf("\nVersion : %u", Version);
+	
+ 	count=fread(&hashPrevBlock, 1, 32, BLOCK);//Reading Hash of previous block 
+	
+	if (count!=32)
+	{
+		printf("\nError reading previous block header hash");
+	}
+	printf("\nHash of previous block : ");
+	
+	for(int k=0;k<32;k++)
+	{	
+		check.previous_block_header_hash[k]=hashPrevBlock[31-k];
+		printf("%02x",hashPrevBlock[31-k]);
+	}
+	
+	
+	count=fread(&hashMerkleRoot, 1, 32, BLOCK);//Reading Hash of merkle root of the block 
+	
+	if (count!=32)
+	{
+		printf("\nError reading merkle root hash");
+	}
+	
+	printf("\nHash of Merkle Root : ");
+
+	for(int j=0;j<32;j++)
+	{
+		printf("%02x", hashMerkleRoot[31-j]);
+		check.Merkle_Root[j] = hashMerkleRoot[31-j];
+	}
+	
+	count=fread(&Time, 1, 4, BLOCK);//Reading Time of block 
+	
+	if (count!=4)
+	{
+		printf("\Error reading time stamp of block header");
+	}
+	time_t tx_time=Time;
+	printf("\nBlock time : %s", ctime(&tx_time));
+	
+	count=fread(&Bits, 1, 4, BLOCK);//Reading bits (difficulty level) of block 
+	
+	if (count!=4)
+	{
+		printf("\nError reading Bits of  block header");
+	}
+	printf("\nBlock bits : %2x", Bits);
+
+	count=fread(&Nonce, 1, 4, BLOCK);//Reading Nonce from block header
+	
+	if (count!=4)
+	{
+		printf("\nError reading Nonce block header");
+	}
+	printf("\nNonce : %u", Nonce);
+ 
+}
+
+
+void check_previous_header(FILE* block)
+{
+	fseek(block, 8, SEEK_SET);
+	unsigned char *Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	unsigned char *Hash_2d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	unsigned char *block_header_content=(unsigned char*)malloc(80*sizeof(unsigned char));
+	int count=fread(block_header_content, 1, 80, block);//trying to read magic number
+	if (count!=80)
+	{
+		printf("\nCould not read the block header");
+		free(Hash_1d);
+		free(Hash_2d);
+		free(block_header_content);
+		return;
+	}
+	SHA256(block_header_content, 80, Hash_1d);
+	SHA256(Hash_1d, 32,Hash_2d);
+	for(int j=0;j<32;j++)
+	{
+		check.calculated_previous_block_header_hash[j]=Hash_2d[31-j];
+	}
+	
+	free(Hash_1d);
+	free(Hash_2d);
+	free(block_header_content);
+}
+
 uint64_t chain_op_transactions(FILE* BLOCK)
 {
 	uint64_t output_script_size; 
-   	uint8_t *output_script;
+    uint8_t *output_script;
 	uint64_t value;
 	uint64_t count=fread(&value, 1, 8, BLOCK);//Fetching value of transaction
 	if (count!=8)
@@ -229,245 +481,14 @@ void get_out_tx(unsigned char *prev_hash, uint32_t index, uint64_t *tx_value)
 	
 	fclose(fp);
 }
-
-void calculatehash(unsigned char **hash_array)
-{
-	unsigned char *hash_64byte = (unsigned char *)malloc(64*sizeof(unsigned char));
-	int k=0;
-	uint64_t nooftxn_temp=nooftxn;
-	//printf("\n%" PRIu64 " - new var",nooftxn_temp);
-	nooftxn_temp=nooftxn_temp/2;
-	//printf("\n%" PRIu64 " - new var after div by 2",nooftxn_temp);
-	unsigned int m=0;
-	//printf("value of m %d",m);
-	
-	while (m<nooftxn)
-	{
-		//printf("\nm=%d\n",m);
-		//printf("\nHash 64 = > ");
-		for(int j=0;j<64;j++)
-		{
-			if (j<32)
-			{
-				hash_64byte[j]=hash_array[m][j];
-				//printf("%02x",hash_64byte[j]);
-			}
-			else
-			{
-				hash_64byte[j]=hash_array[m+1][j-32];
-				//printf("%02x",hash_64byte[j]);
-			}
-
-		}
-		//printf("\n");		
-		SHA256((unsigned char *)hash_64byte,64,(unsigned char *)hash_array[k]);
-		//printf("\nHASH of 64 - once :-");
-		SHA256((unsigned char *)hash_array[k],32,(unsigned char *)hash_array[k]);
-		//printf("\nSecond HASH of 64 :-");
-		k++;
-		m=m+2;
-	}
-}	
-
-int Magic_number(FILE* BLOCK)
-{
-	unsigned char magic_check[4] = {0xfb,0xc0,0xb6,0xdb};
-	unsigned char magic[4];
-	int verify=0;
-	int count = fread(&magic, 1, 4, BLOCK);//trying to read magic number
-	if (count!=4)
-	{
-		printf("\nError reading magic number");
-	}
-	printf("\nMagic no read as:");
-	for(int i=0;i<4;i++)
-	{	
-		printf("%2x",magic[i]);
-	}
-	for(int i=0;i<4;i++)
-	{	
-		if (magic[i]!=magic_check[i])
-								 
-		{
-			verify=1;
-			break;
-		}
-	}
-	if (verify!=0)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
-
-int calculate_block_size(FILE* BLOCK)
-{
- 
-	uint32_t block_size = 0;
-	int count=fread(&block_size, 1, 4, BLOCK);
-	if (count!=4)
-	{
-		printf("\nError reading block size");
-	}
-	
-	printf("\nBlock_size is : %u",block_size);
-
-
-	/*To calculate block size*/
-	
-  	uint32_t block_start_pointer = 0;
-	block_start_pointer = ftell(BLOCK);  //where is file pointer righ now save it 
-	fseek(BLOCK, 0, SEEK_END);          // placing the file pointer to end of file
-	int cal_size_of_BLOCK = ftell(BLOCK);      // determining the size of plain text file
-	
-	uint32_t actual_blk_size = (uint32_t) (cal_size_of_BLOCK -  block_start_pointer); //size in field is sizeof_file - 8bytes(4 bytes magic, 4 bytes size)
-	
-	if (actual_blk_size!= block_size)
-	{
-		printf("\nIncorrect block size");
-		return 1;
-	}
-	
-	fseek(BLOCK, block_start_pointer, SEEK_SET);          // placing the file pointer again to its previous position (8 byte from start)
-	return 0;
-	
-}
-
-void Fetch_block_header(FILE* BLOCK)
-{
-	uint32_t Version;
-	unsigned char hashPrevBlock[32];
-	unsigned char hashMerkleRoot[32];
-	uint32_t Time;
-	uint32_t Bits;
-	uint32_t Nonce;
-
-	printf("\n\nPrinting Block Header:- ");
-	int count=fread(&Version, 1, 4, BLOCK);//Reading version from block file
-	if (count!=4)
-	{
-		printf("\nError in reading version number");
-	}
-	printf("\nVersion : %u", Version);
-	
- 	count=fread(&hashPrevBlock, 1, 32, BLOCK);//Reading Hash of previous block 
-	
-	if (count!=32)
-	{
-		printf("\nError reading previous block header hash");
-	}
-	printf("\nHash of previous block : ");
-	
-	for(int k=0;k<32;k++)
-	{	
-		check.previous_block_header_hash[k]=hashPrevBlock[31-k];
-		printf("%02x",hashPrevBlock[31-k]);
-	}
-	
-	
-	count=fread(&hashMerkleRoot, 1, 32, BLOCK);//Reading Hash of merkle root of the block 
-	
-	if (count!=32)
-	{
-		printf("\nError reading merkle root hash");
-	}
-	
-	printf("\nHash of Merkle Root : ");
-
-	for(int j=0;j<32;j++)
-	{
-		printf("%02x", hashMerkleRoot[31-j]);
-		check.Merkle_Root[j] = hashMerkleRoot[31-j];
-	}
-	
-	count=fread(&Time, 1, 4, BLOCK);//Reading Time of block 
-	
-	if (count!=4)
-	{
-		printf("error reading time stamp of block header \n");
-	}
-	printf("\nBlock time : %u", Time);
-
-	count=fread(&Bits, 1, 4, BLOCK);//Reading bits (difficulty level) of block 
-	
-	if (count!=4)
-	{
-		printf("\nError reading Bits of  block header");
-	}
-	printf("\nBlock bits : %2x", Bits);
-
-	count=fread(&Nonce, 1, 4, BLOCK);//Reading Nonce from block header
-	
-	if (count!=4)
-	{
-		printf("\nError reading Nonce block header");
-	}
-	printf("\nNonce : %u", Nonce);
-}
-
-uint64_t varint(FILE* BLOCK)
-{
-	uint8_t s1;
-	uint16_t s2;
-	uint32_t s3;
-	uint64_t s4;
-	int count=fread(&s1, 1, 1, BLOCK);//trying to get no of trancsactions
-	if (count!=1)
-	{
-		printf("\nError reading s1");
-	}
-
-	if(s1<0xfd)
-		return (uint64_t)s1;
-
-	else if (s1==0xfd)
-	{
-
-		count=fread(&s2, 1, 2, BLOCK);//trying to get no of trancsactions
-	
-		if (count!=2)
-		{
-			printf("\nError reading s2");
-		}
-
-		return (uint64_t)s2;
-	}
-	else if(s1==0xfe)
-	{
-		count=fread(&s3, 1, 4, BLOCK);//trying to get no of trancsactions
-	
-		if (count!=4)
-		{
-			printf("\nError reading s3");
-		}
-
-		return (uint64_t)s3;
-	}
-	else if(s1==0xff)
-	{
-		count=fread(&s4, 1, 8, BLOCK);//trying to get no of trancsactions
-	
-		if (count!=8)
-		{
-			printf("\nError reading s4");
-		}
-		return (uint64_t)s4;
-		
-	}
-}
-
-void Input_transaction(FILE* BLOCK)
+void Input_transaction(FILE* BLOCK,int loop_count)
 {
 	uint8_t hash_previous_transaction[32];
 	uint32_t n;
 	uint64_t script_length;  
 	uint8_t *input_script;
 	uint32_t sequence_number;
- 
+	uint64_t tx_value=0;
 	uint64_t count=fread(&hash_previous_transaction, 1, 32, BLOCK);//Fetching Hash of previous trancsaction
 	if (count!=32)
 	{
@@ -475,22 +496,35 @@ void Input_transaction(FILE* BLOCK)
 	}
 	printf("\n\tHash of previous transaction to this input : ");
 	for(int j=0;j<32;j++)
+	{
+		IP.previous_tx_hash[j] = hash_previous_transaction[j];	
 		printf("%02x", hash_previous_transaction[31-j]);
-	
+	}		
+		
 	count=fread(&n, 1, 4, BLOCK);//Reading n
 	if (count!=4)
 	{
 		printf("\nError in getting n");
 	}
 	printf("\n\tn : %u",n);
+	IP.index=n;
+	
+	if(loop_count!=0)
+	{
+		get_out_tx(IP.previous_tx_hash, IP.index, &tx_value);
+		
+		if (tx_value==0)
+		{	//Output for current Input not found. Hence block is invalid. To be done later
+		printf("\n\nThe outputs cannot be found and hence inputs cannot be validated");
+		printf("\nBlock cannot be validated without proper block_chain file");
+		}
+		else
+			check.total_in=check.total_in+tx_value;
+	}
 	script_length=varint(BLOCK);			//calculating length of input script
-
-	printf("\n\tScript length :  %llu", script_length);
-
+	printf("\n\tScript length :  %"PRIu64, script_length);
 	input_script=(unsigned char*)malloc(script_length*sizeof(unsigned char));
-
 	count=fread(input_script, 1, script_length, BLOCK);//Feching input script
-					   
 	if (count!=script_length)
 	{
 		printf("\nError in getting input script");
@@ -498,6 +532,8 @@ void Input_transaction(FILE* BLOCK)
 	printf("\n\tInput script : ");
 	for(uint64_t j=0;j<script_length;j++)
 		printf("%02x", input_script[j]);
+		printf("\n");
+	
 	
 	count=fread(&sequence_number, 1, 4, BLOCK);//Fetching sequence number
 	if (count!=4)
@@ -508,20 +544,23 @@ void Input_transaction(FILE* BLOCK)
 	free(input_script);	
 }
 
-void Output_transactions(FILE* BLOCK)
+void Output_transactions(FILE* BLOCK,int txnno)
 {
 	uint64_t output_script_size; 
-  	uint8_t *output_script;
+	uint8_t *output_script;
 	uint64_t value;
 	uint64_t count=fread(&value, 1, 8, BLOCK);//Fetching value of transaction
 	if (count!=8)
 	{
 		printf("\nError in getting value");
 	}
+	
+	if(txnno!=0)
+		check.total_out=check.total_out+value;
 	printf("\n\tValue of transaction : %0.8lf LTC",(double)((value*1.0)/100000000));
 
 	output_script_size=varint(BLOCK);//fetching ouput script size
-	printf("\n\tOutput script size : %llu",output_script_size);
+	printf("\n\tOutput script size : %"PRIu64,output_script_size);
 	output_script =(unsigned char*)malloc(output_script_size*sizeof(unsigned char));
 	
 	count=fread(output_script, 1, output_script_size, BLOCK);//trying to get no of trancsactions
@@ -532,8 +571,8 @@ void Output_transactions(FILE* BLOCK)
 	printf("\n\tOutput script is : ");
 	for(uint64_t j=0;j<output_script_size;j++)
 		printf("%02x", output_script[j]);
+	free(output_script);
 }
-
 void Transactions(FILE* BLOCK,int txno)
 {   
 	unsigned char *Transaction_hash;
@@ -553,23 +592,23 @@ void Transactions(FILE* BLOCK,int txno)
 	printf("\nVersion of Transaction : %u",Transaction_version_no);  
   	input_transaction_count=varint(BLOCK);
 
-	printf("\nNo of input in current transaction : %llu", input_transaction_count);
+	printf("\nNo of input in current transaction : %"PRIu64, input_transaction_count);
 	for(unsigned int i =0;i<input_transaction_count;i++)
 	{
 		printf("\nvin %d",i+1);
 		printf("\n{");
-		Input_transaction(BLOCK);
+		Input_transaction(BLOCK,txno);
 		printf("\n}");
 	}
 	
 	output_transaction_count=varint(BLOCK);
 	
-	printf("\nNo of output from current transaction : %llu", output_transaction_count);
+	printf("\nNo of output from current transaction : %"PRIu64, output_transaction_count);
 	for(unsigned int i =0;i<output_transaction_count;i++)
 	{
 		printf("\nvout %d",i+1);
 		printf("\n{");
-		Output_transactions(BLOCK);
+		Output_transactions(BLOCK,txno);
 		printf("\n}");
 	}
 	
@@ -580,9 +619,8 @@ void Transactions(FILE* BLOCK,int txno)
 	}
 
 	Transaction_end_pointer = ftell(BLOCK);
- 
 	Transaction_size=Transaction_end_pointer-Transaction_start_pointer;
-			  
+	//printf("\nCurrent transaction size is= %d\n",Transaction_size);
 	fseek(BLOCK, Transaction_start_pointer, SEEK_SET);
 	unsigned char *Transaction_content, *Hash_1d,*Hash_2d;
 	Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
@@ -610,35 +648,13 @@ void Transactions(FILE* BLOCK,int txno)
 	free(Hash_2d);
 }
 
-void check_previous_header(FILE* block)
-{
-	fseek(block, 8, SEEK_SET);
-	unsigned char *Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
-	unsigned char *Hash_2d=(unsigned char *)malloc(32*sizeof(unsigned char));
-	unsigned char *block_header_content=(unsigned char*)malloc(80*sizeof(unsigned char));
-	int count=fread(block_header_content, 1, 80, block);//trying to read magic number
-	if (count!=80)
-	{
-		printf("\nCould not read the block header");
-		return;
-	}
-	SHA256(block_header_content, 80, Hash_1d);
-	SHA256(Hash_1d, 32,Hash_2d);
-	for(int j=0;j<32;j++)
-	{
-		check.calculated_previous_block_header_hash[j]=Hash_2d[31-j];
-										   
-  	}
-	
-	free(Hash_1d);
-	free(Hash_2d);
-	free(block_header_content);
-}
-
 void validate()
 {
 	int var1=0;
 	int var2=0;
+
+	printf("\n\nPrev Hash validation");
+	printf("\n--------------------");
 	for(int i=0;i<32;i++)
 	{
 
@@ -653,19 +669,23 @@ void validate()
 
 	if(var1==0)
 		printf("\nPrev block Hash matched successfully!");
+	
+	printf("\n\nMerkel Root Hash Validation");
+	printf("\n---------------------------");
 	for(int i=0;i<32;i++)
 	{
 
 		if(check.calculated_Merkle_Root[i]!=check.Merkle_Root[i])
 		{
 			var2=1;
-			printf("\nMerkle root Hash not matching!");
+			printf("\nMerkle root Hash not matching!\n");
 			break;
 		}
 	
 	}
 	if(var2==0)
-		printf("\nMerkle root Hash matched successfully!");
+		printf("\nMerkle root Hash matched successfully!\n");
+
 }
 
 int main(int argc, char **argv)
@@ -680,7 +700,6 @@ int main(int argc, char **argv)
 		if(BLOCK==NULL)
 		{
 			printf("\nError in opening block file ");
-							
 		}
 	}
 	else
@@ -705,22 +724,17 @@ int main(int argc, char **argv)
 		printf("\nExiting...\n");
 		exit(1);
 	}
-	
+			   
 	retval=calculate_block_size(BLOCK);
-	if (retval==0)
+	if (retval!=0)
 	{
 		printf("\nBlock Size found valid");
 	}
-	else
-	{
-		printf("\nBlock Size not found valid");
-		printf("\nExiting...\n");
-		exit(1);
-	}
+	
 	//Parsing the rest of the block
 	Fetch_block_header(BLOCK);
 	no_of_transactions=varint(BLOCK);
-	printf("\nNo. of transactions in this block : %llu",no_of_transactions);
+	printf("\nNo. of transactions in this block : %"PRIu64,no_of_transactions);
 	check_previous_header(prev_block);
 	
 	nooftxn=(uint64_t)no_of_transactions;
@@ -737,21 +751,44 @@ int main(int argc, char **argv)
 	{
 		hash_array[i]=(unsigned char *)malloc(sizeof(unsigned char)*32);
 	}
-	//printf("\nno of transaction in this block =%llu\n",no_of_transactions);
+	
+	check.total_out=0;
+	check.total_in=0;
+	//printf("\nNo of transaction in this block =%llu\n\n",no_of_transactions);
 	for(uint64_t i = 0;i<no_of_transactions;i++)
 	{
-		printf("\n\n*****Transaction %llu *****",i+1);
+		printf("\n\n*****Transaction %"PRIu64"*****",i+1);
 		Transactions(BLOCK,i);
 	}
+	//uint64_t fee;
+	printf("\n\n*****BLOCK VALIDATION CHECKS*****");
+	printf("\n\nTransaction validation");
+	printf("\n----------------------");
+	//printf("\nTotal Value out : %0.8lf LTC", check.total_out);
+	//printf("\nTotal Value in  : %llu", check.total_in);
+
+	if (check.total_out > check.total_in)
+	{
+		printf("\n\nThe transactions are invalid as total-out is more than total-in");
+		printf("\nThe block is invalid");
+	} 
+	else
+	{
+		printf("\nThe total value in > total value out");
+		printf("\nThe transactions are valid");
+		printf("\nThe total_in = %0.8lf LTC",(double)((check.total_in*1.0)/100000000));
+		printf("\nThe total_out = %0.8lf LTC",(double)((check.total_out*1.0)/100000000));
+		printf("\nThe miner's fee = %0.8lf LTC", (double)(((check.total_in-check.total_out)*1.0)/100000000));
+	}
+	
+	//Merkel Root calculation
 	if (odd_even==1)
 		for(int i=0;i<32;i++)
 			hash_array[nooftxn-1][i]=hash_array[nooftxn-2][i]; //copy last hash again to make even
-	
 	//find merkle root
 	
 	while(nooftxn!=1)
 	{
-		//printf("\nNow nooftxn = %llu",nooftxn);
 		calculatehash(hash_array);
 		nooftxn=nooftxn/2;
 		
@@ -766,17 +803,30 @@ int main(int argc, char **argv)
 		}
 	}
 		
-	//printf("\n Calculated Merkel root : ");
+	
 	for(int j=0;j<32;j++)
 	{		
 		//printf("%02x", hash_array[nooftxn-1][31-j]);
 		check.calculated_Merkle_Root[j]=hash_array[nooftxn-1][31-j];
 	}
-	printf("\n\n*****BLOCK VALIDATION CHECKS*****");
+	
 	printf("\n");
 	validate();//check whether previous block header hash matches
+
 	fclose(BLOCK);
 	fclose(prev_block);
-	 
+	if (no_of_transactions % 2 == 0)
+	{
+		for(uint64_t i=0;i<no_of_transactions;i++)	
+			free(hash_array[i]);
+	}
+	else
+	{
+		for(uint64_t i=0;i<no_of_transactions+1;i++)	
+			free(hash_array[i]);
+	}	
+	free(hash_array);
 	return 0;
+
 }
+
