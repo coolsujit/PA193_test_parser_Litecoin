@@ -16,6 +16,168 @@ struct checks{
    unsigned char calculated_Merkle_Root[32];
 }check;
 
+struct IP_tx_data {
+   unsigned char previous_tx_hash[32];
+   uint32_t index;
+   unsigned char *signature;
+   unsigned char *public_key;  
+   	
+}IP;
+
+uint64_t chain_op_transactions(FILE* BLOCK)
+{
+	uint64_t output_script_size; 
+    uint8_t *output_script;
+	uint64_t value;
+	uint64_t count=fread(&value, 1, 8, BLOCK);//Fetching value of transaction
+	if (count!=8)
+	{
+		printf("\nError in getting value");
+	}
+	output_script_size=varint(BLOCK);//fetching ouput script size
+	
+	output_script = (unsigned char*)malloc(output_script_size*sizeof(unsigned char));
+	
+	count=fread(output_script, 1, output_script_size, BLOCK);//trying to get no of trancsactions
+	if (count!=output_script_size)
+	{
+		printf("\nError in getting output script");
+	}
+	
+	free(output_script);
+	return value;
+}
+
+void chain_ip_transaction(FILE* BLOCK)
+{
+	uint8_t hash_previous_transaction[32];
+	uint32_t n;
+	uint64_t script_length;  
+	uint8_t *input_script;
+	uint32_t sequence_number;
+					 
+	uint64_t count=fread(&hash_previous_transaction, 1, 32, BLOCK);//Fetching Hash of previous trancsaction
+	if (count!=32)
+	{
+		printf("\nError in getting hash_previous_transaction");
+	}
+	count=fread(&n, 1, 4, BLOCK);//Reading n
+	if (count!=4)
+	{
+		printf("\nError in getting n");
+	}
+	
+	script_length=varint(BLOCK);//calculating length of input script
+	input_script=(unsigned char*)malloc(script_length*sizeof(unsigned char));
+	count=fread(input_script, 1, script_length, BLOCK);//Feching input script
+	if (count!=script_length)
+	{
+		printf("\nError in getting input script");
+	}
+	count=fread(&sequence_number, 1, 4, BLOCK);//Fetching sequence number
+	if (count!=4)
+	{
+		printf("Error in getting sequence number \n");
+	}
+
+	free(input_script);	
+}
+
+void chain_Transactions(FILE* BLOCK, unsigned char *hash_to_cmp, uint32_t index, uint64_t *value)
+{   
+	unsigned char *Transaction_hash;
+	uint32_t Transaction_version_no;
+	uint64_t input_transaction_count;
+	uint64_t output_transaction_count;
+	uint32_t lock_time; 
+	//uint64_t temp;
+	int Transaction_start_pointer, Transaction_end_pointer,Transaction_size,output_tx_start;
+	Transaction_start_pointer = ftell(BLOCK);
+	int count=fread(&Transaction_version_no, 1, 4, BLOCK);
+	if (count!=4)
+	{
+		printf("\nError reading Tansaction Version no.");
+	}
+
+	input_transaction_count=varint(BLOCK);
+
+	for(unsigned int i =0;i<input_transaction_count;i++)
+	{
+		chain_ip_transaction(BLOCK);
+	}
+
+	output_tx_start = ftell(BLOCK);// just in case hash matches
+	output_transaction_count=varint(BLOCK);
+	
+	for(unsigned int i =0;i<output_transaction_count;i++)
+	{
+		chain_op_transactions(BLOCK);
+	}
+	
+	count=fread(&lock_time, 1, 4, BLOCK);//trying to read lock time of current transaction
+	if (count!=4)
+	{
+		printf("\nError reading transaction locktime");
+	}
+
+	Transaction_end_pointer = ftell(BLOCK);
+	Transaction_size=Transaction_end_pointer-Transaction_start_pointer;
+	fseek(BLOCK, Transaction_start_pointer, SEEK_SET);
+	unsigned char *Transaction_content, *Hash_1d,*Hash_2d;
+	Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	Hash_2d=(unsigned char *)malloc(32*sizeof(unsigned char));
+	Transaction_hash=(unsigned char *)malloc(32*sizeof(unsigned char));
+	Transaction_content=(unsigned char *)malloc(Transaction_size*sizeof(unsigned char));
+	count=fread(Transaction_content, 1, Transaction_size, BLOCK);//trying to read lock time of current transaction
+	if (count!=Transaction_size)
+	{
+		printf("\nError reading transaction content");
+	}
+	SHA256(Transaction_content, Transaction_size, Hash_1d);
+	SHA256(Hash_1d,32,Hash_2d);
+
+	int var1=0;	
+	for(int i=0;i<32;i++)
+	{
+
+		if(Hash_2d[i]!=hash_to_cmp[i])
+		{
+			var1=1;
+			break;
+		}
+	
+	}
+
+	if(var1==0)
+	{
+		//Hash match found
+		printf("\nHash match found for output tx");
+		fseek(BLOCK,output_tx_start,SEEK_SET);
+		output_transaction_count=varint(BLOCK);
+		for(unsigned int i =0;i<output_transaction_count;i++)
+		{
+			if(index!=i)
+				chain_op_transactions(BLOCK);
+			else
+			{	
+				*value=chain_op_transactions(BLOCK);
+				//printf("\n\n*********The Value Found properly is %llu***********\n\n",*value);
+				break;
+			}
+		}
+	
+	}
+	else
+	{
+		*value=0;
+	}	
+	fseek(BLOCK,Transaction_end_pointer,SEEK_SET);
+	free(Transaction_content);
+	free(Transaction_hash);
+	free(Hash_1d);	
+	free(Hash_2d);
+}
+
 void calculatehash(unsigned char **hash_array)
 {
 	unsigned char *hash_64byte = (unsigned char *)malloc(64*sizeof(unsigned char));
