@@ -5,10 +5,55 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <time.h>
+#include <inttypes.h>
+unsigned char **hash_array;
+uint64_t nooftxn;
+uint8_t odd_even=0; //0 means even, 1 means odd
 struct checks{
    unsigned char previous_block_header_hash[32];
    unsigned char calculated_previous_block_header_hash[32];
+   unsigned char Merkle_Root[32];  
+   unsigned char calculated_Merkle_Root[32];
 }check;
+
+void calculatehash(unsigned char **hash_array)
+{
+	unsigned char *hash_64byte = (unsigned char *)malloc(64*sizeof(unsigned char));
+	int k=0;
+	uint64_t nooftxn_temp=nooftxn;
+	//printf("\n%" PRIu64 " - new var",nooftxn_temp);
+	nooftxn_temp=nooftxn_temp/2;
+	//printf("\n%" PRIu64 " - new var after div by 2",nooftxn_temp);
+	unsigned int m=0;
+	//printf("value of m %d",m);
+	
+	while (m<nooftxn)
+	{
+		//printf("\nm=%d\n",m);
+		//printf("\nHash 64 = > ");
+		for(int j=0;j<64;j++)
+		{
+			if (j<32)
+			{
+				hash_64byte[j]=hash_array[m][j];
+				//printf("%02x",hash_64byte[j]);
+			}
+			else
+			{
+				hash_64byte[j]=hash_array[m+1][j-32];
+				//printf("%02x",hash_64byte[j]);
+			}
+
+		}
+		//printf("\n");		
+		SHA256((unsigned char *)hash_64byte,64,(unsigned char *)hash_array[k]);
+		//printf("\nHASH of 64 - once :-");
+		SHA256((unsigned char *)hash_array[k],32,(unsigned char *)hash_array[k]);
+		//printf("\nSecond HASH of 64 :-");
+		k++;
+		m=m+2;
+	}
+}	
 
 int Magic_number(FILE* BLOCK)
 {
@@ -122,6 +167,7 @@ void Fetch_block_header(FILE* BLOCK)
 	for(int j=0;j<32;j++)
 	{
 		printf("%02x", hashMerkleRoot[31-j]);
+		check.Merkle_Root[j] = hashMerkleRoot[31-j];
 	}
 	
 	count=fread(&Time, 1, 4, BLOCK);//Reading Time of block 
@@ -274,7 +320,7 @@ void Output_transactions(FILE* BLOCK)
 		printf("%02x", output_script[j]);
 }
 
-void Transactions(FILE* BLOCK)
+void Transactions(FILE* BLOCK,int txno)
 {   
 	unsigned char *Transaction_hash;
 	uint32_t Transaction_version_no;
@@ -282,9 +328,9 @@ void Transactions(FILE* BLOCK)
 	uint64_t output_transaction_count;
 	uint32_t lock_time;
 	int Transaction_start_pointer, Transaction_end_pointer,Transaction_size;
-	Transaction_start_pointer = ftell(BLOCK);//
+	Transaction_start_pointer = ftell(BLOCK);
 		
-	int count=fread(&Transaction_version_no, 1, 4, BLOCK);//trying to read magic number
+	int count=fread(&Transaction_version_no, 1, 4, BLOCK);//reading transaction version no.
 	if (count!=4)
 	{
 		printf("\nError reading Tansaction Version no.");
@@ -320,9 +366,9 @@ void Transactions(FILE* BLOCK)
 	}
 
 	Transaction_end_pointer = ftell(BLOCK);
-	//printf("Transaction ends at %d", Transaction_end_pointer);
+ 
 	Transaction_size=Transaction_end_pointer-Transaction_start_pointer;
-	//printf("\nCurrent transaction size is= %d",Transaction_size);
+			  
 	fseek(BLOCK, Transaction_start_pointer, SEEK_SET);
 	unsigned char *Transaction_content, *Hash_1d,*Hash_2d;
 	Hash_1d=(unsigned char *)malloc(32*sizeof(unsigned char));
@@ -341,9 +387,9 @@ void Transactions(FILE* BLOCK)
 	{
 		Transaction_hash[j]=Hash_2d[31-j];
 		printf("%02x", Hash_2d[31-j]);
-		//hash_array[txno][j]=Hash_2d[j]; // Hash copied in 
+		hash_array[txno][j]=Hash_2d[j]; // Hash copied in array for merkel root calculation
 	}
-	//printf("\n");
+	
 	free(Transaction_content);
 	free(Transaction_hash);
 	free(Hash_1d);	
@@ -359,7 +405,7 @@ void check_previous_header(FILE* block)
 	int count=fread(block_header_content, 1, 80, block);//trying to read magic number
 	if (count!=80)
 	{
-		printf("\nCoudnt read the block header");
+		printf("\nCould not read the block header");
 		return;
 	}
 	SHA256(block_header_content, 80, Hash_1d);
@@ -367,8 +413,8 @@ void check_previous_header(FILE* block)
 	for(int j=0;j<32;j++)
 	{
 		check.calculated_previous_block_header_hash[j]=Hash_2d[31-j];
-		//printf("%02x", Hash_2d[31-j]);
-	}
+										   
+  	}
 	
 	free(Hash_1d);
 	free(Hash_2d);
@@ -378,6 +424,7 @@ void check_previous_header(FILE* block)
 void validate()
 {
 	int var1=0;
+	int var2=0;
 	for(int i=0;i<32;i++)
 	{
 
@@ -392,8 +439,19 @@ void validate()
 
 	if(var1==0)
 		printf("\nPrev block Hash matched successfully!");
-		
+	for(int i=0;i<32;i++)
+	{
+
+		if(check.calculated_Merkle_Root[i]!=check.Merkle_Root[i])
+		{
+			var2=1;
+			printf("\nMerkle root Hash not matching!");
+			break;
+		}
 	
+	}
+	if(var2==0)
+		printf("\nMerkle root Hash matched successfully!");
 }
 
 int main(int argc, char **argv)
@@ -417,7 +475,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 	prev_block = fopen("block_prev", "rb");
-	if(BLOCK==NULL)
+	if(prev_block==NULL)
 	{
 		printf("\nError in opening block file ");
 		exit(1);	
@@ -430,7 +488,7 @@ int main(int argc, char **argv)
 	else
 	{
 		printf("\nMagic Number invalid for Litecoin ");
-		printf("\nExiting...");
+		printf("\nExiting...\n");
 		exit(1);
 	}
 	
@@ -442,22 +500,69 @@ int main(int argc, char **argv)
 	else
 	{
 		printf("\nBlock Size not found valid");
-		printf("\nExiting...");
+		printf("\nExiting...\n");
 		exit(1);
 	}
 	//Parsing the rest of the block
 	Fetch_block_header(BLOCK);
 	no_of_transactions=varint(BLOCK);
 	printf("\nNo. of transactions in this block : %llu",no_of_transactions);
+	check_previous_header(prev_block);
 	
+	nooftxn=(uint64_t)no_of_transactions;
+	
+	if (nooftxn % 2 == 0)
+		odd_even=0;
+	else
+	{	odd_even=1;
+		nooftxn++;
+	}
+	
+	hash_array = (unsigned char **)malloc(sizeof(unsigned char *)*nooftxn);
+	for (uint32_t i=0;i<nooftxn;i++)
+	{
+		hash_array[i]=(unsigned char *)malloc(sizeof(unsigned char)*32);
+	}
+	//printf("\nno of transaction in this block =%llu\n",no_of_transactions);
 	for(uint64_t i = 0;i<no_of_transactions;i++)
 	{
 		printf("\n\n*****Transaction %llu *****",i+1);
-		Transactions(BLOCK);
+		Transactions(BLOCK,i);
 	}
-	check_previous_header(prev_block);
+	if (odd_even==1)
+		for(int i=0;i<32;i++)
+			hash_array[nooftxn-1][i]=hash_array[nooftxn-2][i]; //copy last hash again to make even
+	
+	//find merkle root
+	
+	while(nooftxn!=1)
+	{
+		//printf("\nNow nooftxn = %llu",nooftxn);
+		calculatehash(hash_array);
+		nooftxn=nooftxn/2;
+		
+		if (nooftxn==1)
+			break;
+	
+		if(nooftxn%2!=0)
+		{	
+			nooftxn=nooftxn+1;
+			for(int i=0;i<32;i++)
+				hash_array[nooftxn-1][i]=hash_array[nooftxn-2][i]; //copy last hash again to make even
+		}
+	}
+		
+	//printf("\n Calculated Merkel root : ");
+	for(int j=0;j<32;j++)
+	{		
+		//printf("%02x", hash_array[nooftxn-1][31-j]);
+		check.calculated_Merkle_Root[j]=hash_array[nooftxn-1][31-j];
+	}
 	printf("\n\n*****BLOCK VALIDATION CHECKS*****");
 	printf("\n");
-	validate();//check whether previous block header hash matches 
+	validate();//check whether previous block header hash matches
+	fclose(BLOCK);
+	fclose(prev_block);
+	 
 	return 0;
 }
